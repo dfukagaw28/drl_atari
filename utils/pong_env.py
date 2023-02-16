@@ -45,6 +45,8 @@ def make_pong_video(env, video_path, width=224, height=224, reward_font_size=20,
 if __name__=="__main__":
     video_name = args.video_name
     videos_path = root_path / "videos"
+    if not videos_path.exists():
+        videos_path.mkdir(parents=True)
     video_path = videos_path / video_name
     env = make_pong_env()
     make_pong_video(env, video_path)
