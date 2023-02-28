@@ -4,6 +4,7 @@ from collections import deque
 import cv2
 import gym
 import numpy as np
+import torch
 
 class NoopResetEnv(gym.Wrapper):
     def __init__(self, env, noop_max=30):
@@ -131,27 +132,31 @@ class FrameStack(gym.Wrapper):
         gym.Wrapper.__init__(self, env)
         self.k = k
         self.frames = deque([], maxlen=k)
-        shp = env.observation_space.shape
+        h, w, c = env.observation_space.shape
         self.observation_space = gym.spaces.Box(low=0, high=255,
-                                            shape=((k,) + shp),
+                                            shape=(k, c, h, w),
                                             dtype=env.observation_space.dtype)
 
     def reset(self):
-        ob = self.env.reset()
+        obs = self.env.reset()
         for _ in range(self.k):
-            self.frames.append(ob)
-        return self._get_ob()
+            self.frames.append(obs)
+        obs = self._get_obs()
+        obs = torch.from_numpy(obs._force().transpose(0,3,1,2))
+        return obs
 
     def step(self, action):
-        ob, reward, done, info = self.env.step(action)
-        self.frames.append(ob)
-        return self._get_ob(), reward, done, info
+        obs, reward, done, info = self.env.step(action)
+        self.frames.append(obs)
+        obs = self._get_obs()
+        obs = torch.from_numpy(obs._force().transpose(0,3,1,2))
+        return obs, reward, done, info
 
-    def _get_ob(self):
+    def _get_obs(self):
         assert len(self.frames) == self.k
         return LazyFrames(list(self.frames))
 
-class LazyFrames(object):
+class LazyFrames:
     def __init__(self, frames):
         self._frames = frames
         self._out = None
@@ -160,7 +165,7 @@ class LazyFrames(object):
         if self._out is None:
             self._out = np.stack(self._frames)
             self._frames = None
-        return self._out
+        return self._out # (k, h, w, c)
 
     def __array__(self, dtype=None):
         out = self._force()
