@@ -15,7 +15,7 @@ class NoopResetEnv(gym.Wrapper):
 
     def reset(self, **kwargs):
         self.env.reset(**kwargs)
-        noops = self.env.unwrapped.np_random.randint(1, self.noop_max+1)
+        noops = self.env.unwrapped.np_random.integers(1, self.noop_max+1)
         obs = None
         for _ in range(noops):
             obs, _, done, _ = self.env.step(self.noop_action)
